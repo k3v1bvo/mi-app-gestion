@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario Persona</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 id="formTitle">Nueva Persona</h1>
+        <form id="personForm">
+            <input type="hidden" id="code" name="code">
+            <div class="mb-3">
+                <label>Nombres *</label>
+                <input type="text" id="names" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>Apellidos</label>
+                <input type="text" id="last_names" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label>Email *</label>
+                <input type="email" id="email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>Teléfono</label>
+                <input type="text" id="cellphone" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label>Dirección</label>
+                <textarea id="address" class="form-control"></textarea>
+            </div>
+            <div class="mb-3">
+                <label>Observaciones</label>
+                <textarea id="observations" class="form-control"></textarea>
+            </div>
+            <div class="mb-3">
+                <label>Grupo *</label>
+                <select id="group_id" class="form-select" required></select>
+            </div>
+            <div class="mb-3">
+                <label>Fotografía</label>
+                <input type="file" id="photo" class="form-control" accept="image/*">
+                <img id="preview" src="" width="100" class="mt-2" style="display:none;">
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <a href="/" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const personId = window.location.pathname.split('/').pop(); // Obtiene el código de la URL
+
+        // Cargar grupos para el select
+        async function loadGroups() {
+            const res = await fetch('/api/groups');
+            const groups = await res.json();
+            const select = document.getElementById('group_id');
+            select.innerHTML = '';
+            groups.forEach(g => {
+                const option = document.createElement('option');
+                option.value = g.code;
+                option.textContent = g.group_name;
+                select.appendChild(option);
+            });
+        }
+
+        // Si es edición, cargar datos de la persona
+        if (personId !== 'new') {
+            document.getElementById('formTitle').innerText = 'Editar Persona';
+            fetch(`/api/persons/${personId}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('code').value = data.code;
+                    document.getElementById('names').value = data.names;
+                    document.getElementById('last_names').value = data.last_names || '';
+                    document.getElementById('email').value = data.email;
+                    document.getElementById('cellphone').value = data.cellphone || '';
+                    document.getElementById('address').value = data.address || '';
+                    document.getElementById('observations').value = data.observations || '';
+                    document.getElementById('group_id').value = data.group_id;
+                    if (data.photograph) {
+                        document.getElementById('preview').src = data.photograph;
+                        document.getElementById('preview').style.display = 'block';
+                    }
+                });
+        }
+
+        // Manejar envío del formulario
+        document.getElementById('personForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                names: document.getElementById('names').value,
+                last_names: document.getElementById('last_names').value,
+                email: document.getElementById('email').value,
+                cellphone: document.getElementById('cellphone').value,
+                address: document.getElementById('address').value,
+                observations: document.getElementById('observations').value,
+                group_id: document.getElementById('group_id').value,
+                photograph: '' // se actualizará si hay foto
+            };
+            const photoFile = document.getElementById('photo').files[0];
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    formData.photograph = e.target.result;
+                    sendForm(formData);
+                };
+                reader.readAsDataURL(photoFile);
+            } else {
+                // Si no hay foto nueva, mantener la existente (solo si editando)
+                if (personId !== 'new') {
+                    formData.photograph = document.getElementById('preview').src;
+                }
+                sendForm(formData);
+            }
+        });
+
+        async function sendForm(data) {
+            const method = personId !== 'new' ? 'PUT' : 'POST';
+            const url = personId !== 'new' ? `/api/persons/${personId}` : '/api/persons';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                window.location.href = '/';
+            } else {
+                const error = await res.json();
+                alert('Error: ' + error.error);
+            }
+        }
+
+        loadGroups();
+    </script>
+</body>
+</html>

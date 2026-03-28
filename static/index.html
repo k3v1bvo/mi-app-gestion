@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Personas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Lista de Personas</h1>
+        <a href="/person/new" class="btn btn-primary mb-3">Agregar Persona</a>
+        <a href="/groups" class="btn btn-secondary mb-3">Gestionar Grupos</a>
+        <table class="table table-striped" id="personsTable">
+            <thead>
+                <tr>
+                    <th>Foto</th><th>Nombre</th><th>Email</th><th>Grupo</th><th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script>
+        async function loadPersons() {
+            const res = await fetch('/api/persons');
+            const persons = await res.json();
+            const tbody = document.querySelector('#personsTable tbody');
+            tbody.innerHTML = '';
+            persons.forEach(p => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = p.photograph ? `<img src="${p.photograph}" width="50" height="50" style="object-fit:cover;">` : 'Sin foto';
+                row.insertCell(1).innerHTML = `${p.names} ${p.last_names}`;
+                row.insertCell(2).innerHTML = p.email;
+                row.insertCell(3).innerHTML = p.groups?.group_name || 'Sin grupo';
+                row.insertCell(4).innerHTML = `
+                    <a href="/person/edit/${p.code}" class="btn btn-sm btn-warning">Editar</a>
+                    <button class="btn btn-sm btn-danger" onclick="deletePerson('${p.code}')">Eliminar</button>
+                `;
+            });
+        }
+        async function deletePerson(code) {
+            if (confirm('¿Eliminar esta persona?')) {
+                await fetch(`/api/persons/${code}`, { method: 'DELETE' });
+                loadPersons();
+            }
+        }
+        loadPersons();
+    </script>
+</body>
+</html>
